@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//workspace/envs/sae-circuits/lib/python3.12/site-packages/nnsight/models/**)",
+      "Bash(python3 -c \":*)"
+    ]
+  }
+}

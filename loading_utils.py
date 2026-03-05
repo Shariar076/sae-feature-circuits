@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 import torch as t
 from nnsight.envoy import Envoy
 from collections import namedtuple
@@ -54,6 +55,37 @@ class Submodule:
                 self.submodule.output[0].grad = t.zeros_like(self.submodule.output[0])
             else:
                 self.submodule.output.grad = t.zeros_like(self.submodule.output)
+
+
+@dataclass(frozen=True)
+class TranscoderSubmodule:
+    """
+    Submodule wrapper for transcoders. Reads from MLP input (pre_feedforward_layernorm output)
+    and writes to MLP output (post_feedforward_layernorm output).
+
+    The transcoder approximates the entire MLP block:
+        input:  output of pre_feedforward_layernorm
+        output: output of post_feedforward_layernorm
+    """
+
+    name: str
+    pre_feedforward_ln: Any  # layer.pre_feedforward_layernorm (read output = MLP input)
+    post_feedforward_ln: Any  # layer.post_feedforward_layernorm (read/write output = MLP output)
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def get_activation(self):
+        """Returns the MLP input (output of pre_feedforward_layernorm), used for encoding."""
+        return self.pre_feedforward_ln.output
+
+    def get_output(self):
+        """Returns the actual MLP output (output of post_feedforward_layernorm), used for residual."""
+        return self.post_feedforward_ln.output
+
+    def set_activation(self, x):
+        """Writes the modified output to post_feedforward_layernorm output."""
+        self.post_feedforward_ln.output[:] = x
 
 
 DictionaryStash = namedtuple("DictionaryStash", ["embed", "attns", "mlps", "resids"])
